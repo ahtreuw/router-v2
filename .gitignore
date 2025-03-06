@@ -1,0 +1,7 @@
+/.idea
+/vendor
+/tests
+/.phpunit.*
+/phpunit.xml.*
+/Dockerfile
+/compose.yaml
