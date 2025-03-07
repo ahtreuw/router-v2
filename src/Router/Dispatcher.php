@@ -44,22 +44,19 @@ class Dispatcher implements DispatcherInterface
         $path = $request->getUri()->getPath();
 
         try {
-
-            foreach ($this->getRoutes(strval($request->getAttribute('APP_VERSION') ?: '0.0')) as $route) {
-                if (!preg_match($route['pattern'], $path, $matches)) {
+            $version = $request->getAttribute('APP_VERSION') ?: '0.0';
+            foreach ($this->getRoutes((string)$version) as $basicPath => $route) {
+                if ($basicPath !== $path && !preg_match($route['pattern'], $path, $matches)) {
                     continue;
                 }
-
                 if (!array_key_exists($method, $route['methods'])) {
                     if ($method !== Path::OPTIONS) {
                         throw new HttpException('Method Not Allowed', 405);
                     }
                     return $this->createOptionsResponse([...array_keys($route['methods']), Path::OPTIONS]);
                 }
-
-                return $this->createRoute($method, $route, $matches);
+                return $this->createRoute($method, $route, $matches ?? null);
             }
-
             throw new HttpException('Not Found', 404);
 
         } catch (HttpException $exception) {
@@ -101,6 +98,7 @@ class Dispatcher implements DispatcherInterface
             $pattern = '\/' . str_replace(['/(', ')/'], ['\/(', ')\/'], trim($pattern, '/'));
             return ["/^$pattern$/", $this->getParameters(array_keys($matches[1] ?? []), $reflector)];
         }
+        $pattern = '\/' . str_replace('/', '\/', trim($pattern, '/'));
         return ["/^$pattern$/", []];
     }
 
@@ -233,8 +231,9 @@ class Dispatcher implements DispatcherInterface
         return $routes;
     }
 
-    private function createRoute(string $method, mixed $route, array $matches): Route
+    private function createRoute(string $method, mixed $route, array|null $matches): Route
     {
+        $matches = $matches ?: [null];
         array_shift($matches);
 
         $parameters = [];
